@@ -29,6 +29,7 @@ import signal
 import socket
 import timeit
 import threading
+import json
 
 # Used for bound_interface
 socket_socket = socket.socket
@@ -680,6 +681,14 @@ def speedtest():
         print_('Share results: http://www.speedtest.net/result/%s.png' %
                resultid[0])
 
+    dlspeedm = round(dlspeed / 1000 / 1000 * 8, 2)
+    ping = round(best['latency'], 3)
+    ulspeedm = round(ulspeed / 1000 / 1000 * 8, 2)
+    stat_json = {
+      'ping': ping,
+      'download': dlspeedm,
+      'upload': ulspeedm}
+    json.dump(stat_json, sys.stdout)
 
 def main():
     try:
