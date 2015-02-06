@@ -479,6 +479,7 @@ def speedtest():
     parser.add_argument('--simple', action='store_true',
                         help='Suppress verbose output, only show basic '
                              'information')
+    parser.add_argument('--json', action='store_true', help='JSON format')
     parser.add_argument('--list', action='store_true',
                         help='Display a list of speedtest.net servers '
                              'sorted by distance')
@@ -504,7 +505,14 @@ def speedtest():
         source = args.source
         socket.socket = bound_socket
 
-    if not args.simple:
+    def quiet():
+        if args.simple:
+            return True
+        if args.json:
+            return True
+        return False
+
+    if not quiet():
         print_('Retrieving speedtest.net configuration...')
     try:
         config = getConfig()
@@ -512,7 +520,7 @@ def speedtest():
         print_('Cannot retrieve speedtest configuration')
         sys.exit(1)
 
-    if not args.simple:
+    if not quiet():
         print_('Retrieving speedtest.net server list...')
     if args.list or args.server:
         servers = closestServers(config['client'], True)
@@ -536,7 +544,7 @@ def speedtest():
     else:
         servers = closestServers(config['client'])
 
-    if not args.simple:
+    if not quiet():
         print_('Testing from %(isp)s (%(ip)s)...' % config['client'])
 
     if args.server:
@@ -591,11 +599,11 @@ def speedtest():
         except:
             best = servers[0]
     else:
-        if not args.simple:
+        if not quiet():
             print_('Selecting best server based on latency...')
         best = getBestServer(servers)
 
-    if not args.simple:
+    if not quiet():
         # Python 2.7 and newer seem to be ok with the resultant encoding
         # from parsing the XML, but older versions have some issues.
         # This block should detect whether we need to encode or not
@@ -607,7 +615,8 @@ def speedtest():
             print_('Hosted by %(sponsor)s (%(name)s) [%(d)0.2f km]: '
                    '%(latency)s ms' % best)
     else:
-        print_('Ping: %(latency)s ms' % best)
+        if not args.json:
+            print_('Ping: %(latency)s ms' % best)
 
     sizes = [350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000]
     urls = []
@@ -615,12 +624,13 @@ def speedtest():
         for i in range(0, 4):
             urls.append('%s/random%sx%s.jpg' %
                         (os.path.dirname(best['url']), size, size))
-    if not args.simple:
+    if not quiet():
         print_('Testing download speed', end='')
-    dlspeed = downloadSpeed(urls, args.simple)
-    if not args.simple:
+    dlspeed = downloadSpeed(urls, quiet())
+    if not quiet():
         print_()
-    print_('Download: %0.2f M%s/s' %
+    if not args.json:
+        print_('Download: %0.2f M%s/s' %
            ((dlspeed / 1000 / 1000) * args.units[1], args.units[0]))
 
     sizesizes = [int(.25 * 1000 * 1000), int(.5 * 1000 * 1000)]
@@ -628,12 +638,13 @@ def speedtest():
     for size in sizesizes:
         for i in range(0, 25):
             sizes.append(size)
-    if not args.simple:
+    if not quiet():
         print_('Testing upload speed', end='')
-    ulspeed = uploadSpeed(best['url'], sizes, args.simple)
-    if not args.simple:
+    ulspeed = uploadSpeed(best['url'], sizes, quiet())
+    if not quiet():
         print_()
-    print_('Upload: %0.2f M%s/s' %
+    if not args.json:
+        print_('Upload: %0.2f M%s/s' %
            ((ulspeed / 1000 / 1000) * args.units[1], args.units[0]))
 
     if args.share and args.mini:
@@ -681,14 +692,15 @@ def speedtest():
         print_('Share results: http://www.speedtest.net/result/%s.png' %
                resultid[0])
 
-    dlspeedm = round(dlspeed / 1000 / 1000 * 8, 2)
-    ping = round(best['latency'], 3)
-    ulspeedm = round(ulspeed / 1000 / 1000 * 8, 2)
-    stat_json = {
-      'ping': ping,
-      'download': dlspeedm,
-      'upload': ulspeedm}
-    json.dump(stat_json, sys.stdout)
+    elif args.json:
+        dlspeedm = round(dlspeed / 1000 / 1000 * 8, 2)
+        ping = round(best['latency'], 3)
+        ulspeedm = round(ulspeed / 1000 / 1000 * 8, 2)
+        stat_json = {
+          'ping': ping,
+          'download': dlspeedm,
+          'upload': ulspeedm}
+        json.dump(stat_json, sys.stdout)
 
 def main():
     try:
