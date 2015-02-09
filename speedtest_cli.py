@@ -30,6 +30,7 @@ import socket
 import timeit
 import threading
 import json
+import datetime
 
 # Used for bound_interface
 socket_socket = socket.socket
@@ -697,6 +698,7 @@ def speedtest():
         ping = round(best['latency'], 3)
         ulspeedm = round(ulspeed / 1000 / 1000 * 8, 2)
         stat_json = {
+          'datetime': datetime.datetime.today().isoformat(),
           'ping': ping,
           'download': dlspeedm,
           'upload': ulspeedm}
